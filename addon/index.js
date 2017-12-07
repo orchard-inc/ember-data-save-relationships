@@ -5,25 +5,25 @@ export default Ember.Mixin.create({
   serializeRelationship(snapshot, data, rel) {
     const relKind = rel.kind;
     const relKey = rel.key;
-    
+
     if (data && this.get(`attrs.${relKey}.serialize`) === true) {
 
       data.relationships = data.relationships || {};
       const key = this.keyForRelationship(relKey, relKind, 'serialize');
       data.relationships[key] = data.relationships[key] || {};
-      
+
       if (relKind === "belongsTo") {
         data.relationships[key].data = this.serializeRecord(snapshot.belongsTo(relKey));
       }
-      
+
       if (relKind === "hasMany" && typeof(snapshot.hasMany(relKey)) !== "undefined") {
         data.relationships[key].data = snapshot.hasMany(relKey).map(this.serializeRecord.bind(this));
       }
-      
+
     }
 
   },
-  
+
   serialize (snapshot, options) {
     if (!(options && options.__isSaveRelationshipsMixinCallback))
     {
@@ -38,7 +38,7 @@ export default Ember.Mixin.create({
     if (!obj) {
       return null;
     }
-    
+
     const serialized = obj.serialize({__isSaveRelationshipsMixinCallback: true});
 
     if (obj.id) {
@@ -68,26 +68,29 @@ export default Ember.Mixin.create({
 
     // // do not allow embedded relationships
     // delete serialized.data.relationships;
-  
+
     return serialized.data;
-  
+
   },
-  
+
   serializeHasMany() {
     this._super(...arguments);
     this.serializeRelationship(...arguments);
   },
-  
+
   serializeBelongsTo() {
     this._super(...arguments);
     this.serializeRelationship(...arguments);
   },
-  
+
   updateRecord(json, store) {
+    if(json.attributes) {
+      json.attributes.__id__ = json.attributes.__id__ || json.attributes['--id--'];
+    }
     if (json.attributes !== undefined && json.attributes.__id__ !== undefined)
     {
       json.type = Ember.String.singularize(json.type);
-      
+
       const record = store.peekAll(json.type)
         .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
         .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
@@ -109,7 +112,7 @@ export default Ember.Mixin.create({
 
   normalizeSaveResponse(store, modelName, obj) {
     const rels = obj.data.relationships || [];
-    
+
     let included = {};
     if (obj.included)
     {
